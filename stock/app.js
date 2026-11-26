@@ -420,24 +420,80 @@
     }
   }
 
+  function waitFrames(n) {
+    return new Promise((resolve) => {
+      let i = 0;
+      function tick() {
+        i += 1;
+        if (i >= n) resolve();
+        else requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
   async function exportPdf() {
     if (!lastResult) return;
     updatePdfMeta();
     saveSettings();
+    fillPdfTable(lastResult);
+
+    const mask = document.createElement('div');
+    mask.className = 'pdf-export-mask';
+    mask.textContent = 'در حال ساخت PDF…';
+    document.body.appendChild(mask);
+
+    pdfRoot.removeAttribute('aria-hidden');
+    pdfRoot.classList.add('pdf-exporting');
+
+    const captureW = Math.max(pdfRoot.scrollWidth, pdfRoot.offsetWidth, 1);
+    const captureH = Math.max(pdfRoot.scrollHeight, pdfRoot.offsetHeight, 1);
+
     const opt = {
-      margin: [10, 10, 14, 10],
+      margin: [8, 8, 12, 8],
       filename: 'stock-report.pdf',
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: captureW,
+        height: captureH,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          const node = clonedDoc.getElementById('pdfRoot');
+          if (!node) return;
+          node.style.opacity = '1';
+          node.style.background = '#ffffff';
+          node.style.position = 'relative';
+          node.style.left = '0';
+          node.style.top = '0';
+          node.style.width = captureW + 'px';
+          node.style.minHeight = captureH + 'px';
+          node.style.height = 'auto';
+          node.style.display = 'block';
+          node.style.overflow = 'visible';
+        },
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      pagebreak: { mode: ['css', 'legacy'] },
     };
+
     btnPdf.disabled = true;
     try {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await waitFrames(3);
       await html2pdf().set(opt).from(pdfRoot).save();
     } catch (e) {
       showError('ساخت PDF ناموفق بود: ' + (e.message || String(e)));
     } finally {
+      pdfRoot.classList.remove('pdf-exporting');
+      pdfRoot.setAttribute('aria-hidden', 'true');
+      mask.remove();
       btnPdf.disabled = false;
     }
   }

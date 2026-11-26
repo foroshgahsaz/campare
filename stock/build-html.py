@@ -151,17 +151,36 @@ HTML_HEAD = """<!DOCTYPE html>
     .hidden {{ display: none !important; }}
     .logo-preview {{ max-height: 56px; max-width: 160px; margin-top: 0.5rem; object-fit: contain; }}
 
-    /* ناحیهٔ چاپ PDF — خارج از صفحه ولی قابل رندر */
+    /* ناحیهٔ PDF — باید در viewport باشد تا html2canvas رندر کند */
     #pdfRoot {{
       position: fixed;
-      left: -12000px;
+      left: 0;
       top: 0;
       width: 270mm;
+      max-width: 100vw;
       background: #fff;
       color: #111;
       font-family: "Vazirmatn", Tahoma, sans-serif;
       direction: rtl;
       padding: 12mm 14mm 16mm;
+      z-index: -1;
+      opacity: 1;
+      pointer-events: none;
+      overflow: visible;
+    }}
+    #pdfRoot.pdf-exporting {{
+      z-index: 100001;
+    }}
+    .pdf-export-mask {{
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      background: rgba(15, 20, 25, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1rem;
     }}
     .pdf-header {{
       display: flex;
